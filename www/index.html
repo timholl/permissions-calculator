@@ -1,0 +1,238 @@
+<html>
+   <head>
+      <meta charset="UTF-8" />
+      <title>Simple UNIX permissions calculator</title>
+<style type="text/css">
+   #wrapper {
+      width: 728px;
+      margin: 0 auto;
+   }
+
+   #wrapper hr {
+      border: 1px dotted grey;
+   }
+
+   #perms-contaier fieldset {
+      width: 150px;
+      height: 100px;
+      float: left;
+   }
+
+   #perms-contaier fieldset ul {
+      padding: 0px;
+      margin: 0px;
+   }
+
+   #perms-contaier fieldset li {
+      list-style-type: none;
+   }
+
+   #warnings {
+      padding-top: 5px;
+   }
+
+   #warnings .warning {
+      padding: 0px 5px 0px 5px;
+      margin: 5px;
+      color: red;
+   }
+
+   #results .helptext {
+      color: black;
+      font-size: 8pt;
+   }
+
+   #results .box {
+      color: black;
+      border: 1px solid #ccc;
+      margin: 0.15em 0;
+      text-align: center;
+      font-size: 24pt;
+   }
+</style>
+<script type="text/javascript">
+   function init() {
+      document.getElementById('perms-contaier').querySelectorAll("input[type=checkbox]").forEach((checkbox) => {
+            checkbox.addEventListener('change', update);
+      });
+
+      update(); // Trigger initial update
+   }
+
+   function getCheckbox(id) {
+      return document.getElementById('perms-contaier').querySelector("input[type=checkbox][id=" + id + "]")
+   }
+
+   /*
+    * Calculates the extended 4-digit octal value for chmod
+    */
+   function calculateChmod() {
+      let chmod = 0;
+
+      if (getCheckbox("suid").checked == true)           { chmod += 4000;  }
+      if (getCheckbox("sgid").checked == true)           { chmod += 2000;  }
+      if (getCheckbox("sticky_bit").checked == true)     { chmod += 1000;  }
+
+      if (getCheckbox("user_read").checked == true)      { chmod += 400;   }
+      if (getCheckbox("user_write").checked == true)     { chmod += 200;   }
+      if (getCheckbox("user_execute").checked == true)   { chmod += 100;   }
+
+      if (getCheckbox("group_read").checked == true)     { chmod += 40;    }
+      if (getCheckbox("group_write").checked == true)    { chmod += 20;    }
+      if (getCheckbox("group_execute").checked == true)  { chmod += 10;    }
+
+      if (getCheckbox("other_read").checked == true)     { chmod += 4;     }
+      if (getCheckbox("other_write").checked == true)    { chmod += 2;     }
+      if (getCheckbox("other_execute").checked == true)  { chmod += 1;     }
+
+      return chmod.toString().padStart(4, '0'); // Pad to 4-digit
+   }
+
+   /*
+    * Calculate symbolic representation
+    */
+   function calculateChmodSym() {
+      let chmodsym = '';
+
+      if (getCheckbox("user_read").checked == true)      { chmodsym += 'r'; } else { chmodsym += '-'; }
+      if (getCheckbox("user_write").checked == true)     { chmodsym += 'w'; } else { chmodsym += '-'; }
+
+      if (getCheckbox("user_execute").checked !== true && getCheckbox("suid").checked !== true) {
+         chmodsym += '-';
+      } else if (getCheckbox("user_execute").checked == true && getCheckbox("suid").checked !== true) {
+         chmodsym += 'x';
+      } else if (getCheckbox("user_execute").checked !== true && getCheckbox("suid").checked == true) {
+         chmodsym += 'S';
+      } else {
+         chmodsym += 's';
+      }
+
+      if (getCheckbox("group_read").checked == true)     { chmodsym += 'r'; } else { chmodsym += '-'; }
+      if (getCheckbox("group_write").checked == true)    { chmodsym += 'w'; } else { chmodsym += '-'; }
+
+      if (getCheckbox("group_execute").checked !== true && getCheckbox("sgid").checked !== true) {
+         chmodsym += '-';
+      } else if (getCheckbox("group_execute").checked == true && getCheckbox("sgid").checked !== true) {
+         chmodsym += 'x';
+      } else if (getCheckbox("group_execute").checked !== true && getCheckbox("sgid").checked == true) {
+         chmodsym += 'S';
+      } else {
+         chmodsym += 's';
+      }
+
+      if (getCheckbox("other_read").checked == true)     { chmodsym += 'r'; } else { chmodsym += '-'; }
+      if (getCheckbox("other_write").checked == true)    { chmodsym += 'w'; } else { chmodsym += '-'; }
+
+      if (getCheckbox("other_execute").checked !== true && getCheckbox("sticky_bit").checked !== true) {
+         chmodsym += '-';
+      } else if (getCheckbox("other_execute").checked == true && getCheckbox("sticky_bit").checked !== true) {
+         chmodsym += 'x';
+      } else if (getCheckbox("other_execute").checked !== true && getCheckbox("sticky_bit").checked == true) {
+         chmodsym += 'T';
+      } else {
+         chmodsym += 't';
+      }
+
+      return chmodsym;
+   }
+
+   function calculateWarnings() {
+      let warnings = [];
+
+      // suid-bit without user execute privilege
+      if (getCheckbox("suid").checked == true && getCheckbox("user_execute").checked !== true) {
+         warnings.push("User must have execute rights for setuid to work!");
+      }
+
+      // sgid-bit without group execute privilege
+      if (getCheckbox("sgid").checked == true && getCheckbox("group_execute").checked !== true) {
+         warnings.push("Group must have execute rights for setgid to work!");
+      }
+
+      // sticky-bit without other execute privilege
+      if (getCheckbox("sticky_bit").checked == true && getCheckbox("other_execute").checked !== true) {
+         warnings.push("Other must have execute rights for sticky bit to work!");
+      }
+
+      return warnings;
+   }
+
+   function update() {
+      let chmod = calculateChmod();
+      let chmodsym = calculateChmodSym();
+      let warnings = calculateWarnings();
+
+      // TODO: Wenn Warnungen existieren, die Ergebnisse ausgrauen/verstecken
+
+      document.getElementById("chmod").innerHTML = chmod;
+      document.getElementById("chmodsym").innerHTML = chmodsym;
+
+      updateWarnings(warnings);
+   }
+
+   function updateWarnings(warnings) {
+      let warningsContainer = document.getElementById("warnings");
+
+      warningsContainer.innerHTML = '';
+      warnings.forEach(function(warning) {
+         warningsContainer.innerHTML += "<p class='warning'>&#9888; " + warning + "</p>";
+      });
+   }
+
+   window.onload = init;
+</script>
+   </head>
+   <body>
+      <div id="wrapper">
+         <h2>Simple UNIX permissions calculator</h2>
+         <!-- Permission checkboxes -->
+         <div id="perms-contaier">
+            <fieldset id="special">
+               <legend>Special</legend>
+                  <ul>
+                     <li><label for="suid"><input type="checkbox" name="suid" id="suid">setuid</label></li>
+                     <li><label for="sgid"><input type="checkbox" name="sgid" id="sgid">setgid</label></li>
+                     <li><label for="sticky_bit"><input type="checkbox" name="sticky_bit" id="sticky_bit">Sticky bit</label></li>
+                  </ul>
+            </fieldset>
+            <fieldset id="user">
+               <legend>User</legend>
+               <ul>
+                  <li><label for="user_read"><input type="checkbox" name="user_read" id="user_read">Read</label></li>
+                  <li><label for="user_write"><input type="checkbox" name="user_write" id="user_write">Write</label></li>
+                  <li><label for="user_execute"><input type="checkbox" name="user_execute" id="user_execute">Execute</label></li>
+               </ul>
+            </fieldset>
+            <fieldset id="group">
+               <legend>Group</legend>
+               <ul>
+                  <li><label for="group_read"><input type="checkbox" name="group_read" id="group_read">Read</label></li>
+                  <li><label for="group_write"><input type="checkbox" name="group_write" id="group_write">Write</label></li>
+                  <li><label for="group_execute"><input type="checkbox" name="group_execute" id="group_execute">Execute</label></li>
+               </ul>
+            </fieldset>
+            <fieldset id="other">
+               <legend>Other</legend>
+               <ul>
+                  <li><label for="other_read"><input type="checkbox" name="other_read" id="other_read">Read</label></li>
+                  <li><label for="other_write"><input type="checkbox" name="other_write" id="other_write">Write</label></li>
+                  <li><label for="other_execute"><input type="checkbox" name="other_execute" id="other_execute">Execute</label></li>
+               </ul>
+            </fieldset>
+            <br style="clear:both" />
+         </div>
+         <hr/>
+         <!-- Results -->
+         <fieldset id="results">
+            <legend>Results</legend>
+            <div class="helptext">Chmod value:</div>
+            <div id="chmod" class="box"></div>
+
+            <div class="helptext">Textual representation:</div>
+            <div id="chmodsym" class="box"></div>
+         </fieldset>
+         <!-- Wrapper for warnings -->
+         <div id="warnings"></div>
+      </div>
+   </body>
+</html>
