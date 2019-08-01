@@ -73,6 +73,12 @@
          checkbox.addEventListener('change', update);
       });
       document.getElementById('chmod').addEventListener('focusout', applyChmod);
+      document.getElementById('chmod').addEventListener('keypress', function(e) {
+         let key = e.which || e.keyCode;
+         if (key === 13) { // Enter
+            applyChmod();
+         }
+      });
 
       // Trigger initial update
       update();
