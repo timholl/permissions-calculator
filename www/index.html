@@ -43,28 +43,50 @@
    }
 
    #results .box {
+      width: 100%;
       color: black;
       border: 1px solid #ccc;
       margin: 0.15em 0;
       text-align: center;
       font-size: 24pt;
    }
+
+   input[readonly]
+   {
+      background-color: #efefef;
+   }
 </style>
 <script type="text/javascript">
-   function init() {
+   function resetAll() {
       document.getElementById('perms-contaier').querySelectorAll("input[type=checkbox]").forEach((checkbox) => {
-            checkbox.addEventListener('change', update);
+         checkbox.checked = false;
       });
-
-      update(); // Trigger initial update
+      document.getElementById('chmod').value = '';
+      document.getElementById('chmodsym').value = '';
    }
 
+   function init() {
+      resetAll();
+
+      /* Add event listeners (checkboxes and chmod form) */
+      document.getElementById('perms-contaier').querySelectorAll("input[type=checkbox]").forEach((checkbox) => {
+         checkbox.addEventListener('change', update);
+      });
+      document.getElementById('chmod').addEventListener('focusout', applyChmod);
+
+      // Trigger initial update
+      update();
+   }
+
+   /*
+    * Helper for getting checkbox elements by id
+    */
    function getCheckbox(id) {
       return document.getElementById('perms-contaier').querySelector("input[type=checkbox][id=" + id + "]")
    }
 
    /*
-    * Calculates the extended 4-digit octal value for chmod
+    * Calculates the extended 4-digit octal value for chmod using the checkboxes
     */
    function calculateChmod() {
       let chmod = 0;
@@ -89,7 +111,7 @@
    }
 
    /*
-    * Calculate symbolic representation
+    * Calculate symbolic representation using the checkboxes
     */
    function calculateChmodSym() {
       let chmodsym = '';
@@ -162,11 +184,8 @@
       let chmodsym = calculateChmodSym();
       let warnings = calculateWarnings();
 
-      // TODO: Wenn Warnungen existieren, die Ergebnisse ausgrauen/verstecken
-
-      document.getElementById("chmod").innerHTML = chmod;
-      document.getElementById("chmodsym").innerHTML = chmodsym;
-
+      document.getElementById("chmod").value = chmod;
+      document.getElementById("chmodsym").value = chmodsym;
       updateWarnings(warnings);
    }
 
@@ -179,12 +198,179 @@
       });
    }
 
+   function applyChmod() {
+      let chmod = document.getElementById('chmod').value;
+      resetAll();
+
+      // Check if input consists of 3 to 4 digits
+      let regex = /^[0-7]{3,4}$/;
+      if (!chmod.match(regex) || chmod.length < 3 || chmod.length > 4) { // Additional length checks needed, since the regex matches longer strings with leading zeroes :(
+         alert("Error: Invalid input for chmod string!");
+         return;
+      }
+
+      /** Parse input **/
+
+      // Parse special bit (if present)
+      if (chmod.length == 4) {
+         let bit = chmod.charAt(0);
+         chmod = chmod.substr(1,3); // Cut off first bit
+         switch(bit) {
+            case '0':
+               // Noop
+               break;
+            case '1':
+               getCheckbox("sticky_bit").checked = true;
+               break;
+            case '2':
+               getCheckbox("sgid").checked = true;
+               break;
+            case '3':
+               getCheckbox("sticky_bit").checked = true;
+               getCheckbox("sgid").checked = true;
+               break;
+            case '4':
+               getCheckbox("suid").checked = true;
+               break;
+            case '5':
+               getCheckbox("sticky_bit").checked = true;
+               getCheckbox("suid").checked = true;
+               break;
+            case '6':
+               getCheckbox("sgid").checked = true;
+               getCheckbox("suid").checked = true;
+               break;
+            case '7':
+               getCheckbox("sticky_bit").checked = true;
+               getCheckbox("sgid").checked = true;
+               getCheckbox("suid").checked = true;
+               break;
+            default:
+               return; // Should never be reached
+         }
+      }
+
+      // First character of chmod: user privileges
+      switch(chmod.charAt(0)) {
+         case '0':
+            // Noop
+            break;
+         case '1':
+            getCheckbox("user_execute").checked = true;
+            break;
+         case '2':
+            getCheckbox("user_write").checked = true;
+            break;
+         case '3':
+            getCheckbox("user_execute").checked = true;
+            getCheckbox("user_write").checked = true;
+            break;
+         case '4':
+            getCheckbox("user_read").checked = true;
+            break;
+         case '5':
+            getCheckbox("user_execute").checked = true;
+            getCheckbox("user_read").checked = true;
+            break;
+         case '6':
+            getCheckbox("user_read").checked = true;
+            getCheckbox("user_write").checked = true;
+            break;
+         case '7':
+            getCheckbox("user_execute").checked = true;
+            getCheckbox("user_read").checked = true;
+            getCheckbox("user_write").checked = true;
+            break;
+         default:
+            return; // Should never be reached
+      }
+
+      // Second character of chmod: group privileges
+      switch(chmod.charAt(1)) {
+         case '0':
+            // Noop
+            break;
+         case '1':
+            getCheckbox("group_execute").checked = true;
+            break;
+         case '2':
+            getCheckbox("group_write").checked = true;
+            break;
+         case '3':
+            getCheckbox("group_execute").checked = true;
+            getCheckbox("group_write").checked = true;
+            break;
+         case '4':
+            getCheckbox("group_read").checked = true;
+            break;
+         case '5':
+            getCheckbox("group_execute").checked = true;
+            getCheckbox("group_read").checked = true;
+            break;
+         case '6':
+            getCheckbox("group_read").checked = true;
+            getCheckbox("group_write").checked = true;
+            break;
+         case '7':
+            getCheckbox("group_execute").checked = true;
+            getCheckbox("group_read").checked = true;
+            getCheckbox("group_write").checked = true;
+            break;
+         default:
+            return; // Should never be reached
+      }
+
+      // Third character of chmod: other privileges
+      switch(chmod.charAt(2)) {
+         case '0':
+            // Noop
+            break;
+         case '1':
+            getCheckbox("other_execute").checked = true;
+            break;
+         case '2':
+            getCheckbox("other_write").checked = true;
+            break;
+         case '3':
+            getCheckbox("other_execute").checked = true;
+            getCheckbox("other_write").checked = true;
+            break;
+         case '4':
+            getCheckbox("other_read").checked = true;
+            break;
+         case '5':
+            getCheckbox("other_execute").checked = true;
+            getCheckbox("other_read").checked = true;
+            break;
+         case '6':
+            getCheckbox("other_read").checked = true;
+            getCheckbox("other_write").checked = true;
+            break;
+         case '7':
+            getCheckbox("other_execute").checked = true;
+            getCheckbox("other_read").checked = true;
+            getCheckbox("other_write").checked = true;
+            break;
+         default:
+            return; // Should never be reached
+      }
+
+      /*
+       * Since checkboxes are set correctly now, trigger update as if the checkboxes were set manually
+       * This leads to regeneration of the chmod-string, which will (hopefully) be the same as the one entered.
+       */
+      update();
+   }
+
    window.onload = init;
 </script>
    </head>
    <body>
       <div id="wrapper">
          <h2>Simple UNIX permissions calculator</h2>
+         <p><small>
+            Usage: Select the privileges with the checkboxes below or enter an octal chmod value to analyze it.
+         </small></p>
          <!-- Permission checkboxes -->
          <div id="perms-contaier">
             <fieldset id="special">
@@ -225,11 +411,11 @@
          <!-- Results -->
          <fieldset id="results">
             <legend>Results</legend>
-            <div class="helptext">Chmod value:</div>
-            <div id="chmod" class="box"></div>
+            <div class="helptext">Octal <code>chmod</code> value: (you can enter either 3- or 4-digit)</div>
+            <input id="chmod" class="box" />
 
             <div class="helptext">Textual representation:</div>
-            <div id="chmodsym" class="box"></div>
+            <input id="chmodsym" class="box" readonly="readonly" />
          </fieldset>
          <!-- Wrapper for warnings -->
          <div id="warnings"></div>
