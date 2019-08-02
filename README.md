@@ -1,3 +1,3 @@
 # Simple UNIX permissions calculator
 
-One-file utility for calculating Unix permissions or convertig between different notations.
+One-file utility for calculating Unix permissions or convertig them between different notations.
